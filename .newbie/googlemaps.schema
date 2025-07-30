@@ -1,10 +1,10 @@
 // !! ------------------------------------------------------------ //
 // !!            [Microservice] Google Maps models                         //
 // !! ------------------------------------------------------------ //
-// * Place                                                         //
+// * GooglePlace                                                         //
 // * ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ ⌄ //
 
-model Place {
+model GooglePlace {
   id                   Int      @id @default(autoincrement())
   name                 String?
   address              String?
