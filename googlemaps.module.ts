@@ -1,9 +1,9 @@
 import {Global, Module} from '@nestjs/common';
-import {PlacesService} from './places.service';
+import {GooglePlacesService} from './google-places.service';
 
 @Global()
 @Module({
-  providers: [PlacesService],
-  exports: [PlacesService],
+  providers: [GooglePlacesService],
+  exports: [GooglePlacesService],
 })
 export class GoogleMapsModule {}
