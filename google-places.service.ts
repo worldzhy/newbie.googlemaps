@@ -64,7 +64,7 @@ export class GooglePlacesService {
     const placeIds: string[] = [];
     const places: {
       input: string;
-      placeId?: string;
+      placeId: string;
       text?: object;
       structuredFormat?: object;
       types?: string[];
