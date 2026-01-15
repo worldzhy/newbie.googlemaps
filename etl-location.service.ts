@@ -4,11 +4,7 @@ import {GooglePlacesService} from './google-places.service';
 import {PrismaService} from '@framework/prisma/prisma.service';
 import {normalize} from './states-normalize';
 import {google} from '@googlemaps/places/build/protos/protos';
-import {
-  GoogleAddressTypeAliases,
-  CA_States,
-  US_States,
-} from './google-places.constants';
+import {GoogleAddressTypeAliases, CA_States, US_States} from './google-places.constants';
 
 enum ELocationType {
   Establishment = 'establishment',
@@ -53,8 +49,7 @@ export class LocationsService {
     if (!placeId) return defaultLocation;
     const place = await this.googlePlacesService.getPlaceDetail(placeId);
     if (!place) return defaultLocation;
-    if (!place.addressComponents || place.addressComponents.length === 0)
-      return defaultLocation;
+    if (!place.addressComponents || place.addressComponents.length === 0) return defaultLocation;
     const mappingResult = this.getPlaceDetailObj(place.addressComponents);
     const {
       country,
@@ -92,26 +87,30 @@ export class LocationsService {
     };
   }
 
-  private async getPlaceIdFromText(addrText, state, type) {
+  private async getPlaceIdFromText(addrText: string | null, state: string, type: ELocationType): Promise<string> {
     // only state filter
     if (!addrText || state?.toLowerCase() === addrText.toLowerCase()) return '';
     // pobox filter
     const POBOX_REGX = /^(P\s*O\s*BOX|PO\s*BOX|POBOX|P\.O\.\s*BOX|P\/O\s*BOX)/i;
     if (POBOX_REGX.test(addrText)) return '';
-    const r = await this.prisma.googlePlacePrediction.findMany({
+    const predictions = await this.prisma.googlePlacePrediction.findMany({
       where: {input: addrText},
     });
 
-    if (isEmpty(r)) return '';
+    if (isEmpty(predictions)) return '';
     // const similarityCompare = (a, b) => (JaroWinklerDistance(addrText, b['description'] || '', { ignoreCase: true }) - JaroWinklerDistance(addrText, a['description'] || '', { ignoreCase: true }));
 
     const rWithState =
       type !== 'establishment'
-        ? r.data.predictions[0]
-        : r.data.predictions.find(v => {
-            for (let i = 0; i < v?.terms?.length; i++) {
-              const term = v.terms[i];
-              let tValue = term.value?.toLowerCase();
+        ? predictions[0]
+        : predictions.find((v: any) => {
+            const terms = (v.structuredFormat as any)?.mainText || v.text;
+            if (!terms) return false;
+            const termsArray = Array.isArray(terms) ? terms : [terms];
+            for (let i = 0; i < termsArray.length; i++) {
+              const term = termsArray[i];
+              let tValue = typeof term === 'string' ? term : term?.value;
+              tValue = tValue?.toLowerCase();
               try {
                 tValue = normalize(tValue)?.toLowerCase();
               } catch (error) {}
@@ -129,12 +128,10 @@ export class LocationsService {
             }
           });
     if (!rWithState) return '';
-    return rWithState.place_id;
+    return (rWithState as any).placeId;
   }
 
-  private getPlaceDetailObj(
-    addressComponents: google.maps.places.v1.Place.IAddressComponent[]
-  ) {
+  private getPlaceDetailObj(addressComponents: google.maps.places.v1.Place.IAddressComponent[]) {
     const addressObj = {
       route: '',
       country: '',
@@ -165,19 +162,13 @@ export class LocationsService {
       });
     });
     if (!addressObj.city) {
-      const targetComponent = addressComponents.find((addressObj: any) =>
-        addressObj.types.includes('sublocality')
-      );
+      const targetComponent = addressComponents.find((addressObj: any) => addressObj.types.includes('sublocality'));
       if (typeof targetComponent?.longText === 'string') {
         addressObj.city = targetComponent?.longText;
       }
     }
-    addressObj.streetAddress1 = `${
-      addressObj.streetNumber ? `${addressObj.streetNumber} ` : ''
-    }${addressObj.route}`;
-    addressObj.streetAddress1 = addressObj.streetAddress1
-      ? addressObj.streetAddress1.trim()
-      : '';
+    addressObj.streetAddress1 = `${addressObj.streetNumber ? `${addressObj.streetNumber} ` : ''}${addressObj.route}`;
+    addressObj.streetAddress1 = addressObj.streetAddress1 ? addressObj.streetAddress1.trim() : '';
     if (addressObj.country === 'PR') {
       addressObj.state = 'PR';
       addressObj.country = 'US';
@@ -190,15 +181,11 @@ export class LocationsService {
   private IdeDefaultFormattedAddress(location) {
     if (location?.skip && location?.city) {
       return {
-        formatted_address: `${location.city}, ${
-          location.state
-        } ${this.getLocationCountryBySate(location.state)}`,
+        formatted_address: `${location.city}, ${location.state} ${this.getLocationCountryBySate(location.state)}`,
       };
     }
     return {
-      formatted_address: `${location.state} ${this.getLocationCountryBySate(
-        location.state
-      )}`,
+      formatted_address: `${location.state} ${this.getLocationCountryBySate(location.state)}`,
     };
   }
 
